@@ -12,6 +12,22 @@ a client in order to play a single card game.
 - Once connected and if two users are available then you'll receive a message like such: ```General({{roomId}})```. This is the id of the room that will be used to play.
 - There are two types of movements ```playCard``` and ```fold```, you can decide how to play by sending the following payload via websocket:
 
+### Todo:
+- [x] Send the notification of what's the current balance of the user.
+- [x] Implement DoubleCard game.
+- [x] Implement solution in case of Draw State.
+
+### Key design decisions
+To manage consistent data that supports concurrency this application makes heavy use of:
+```scala 
+Queue[F, Type] and Ref[F, Type]
+```
+
+### Limitations
+
+- Currently, this implementation doesn't support "multi-tabling" - players can play multiple games in parallel at once
+- Account balances are not persistent.
+
 ```json
 {"roomId": "{{roomId}}", "playerId": "{{arbitraryId}}", "action": "fold"}
 ```
