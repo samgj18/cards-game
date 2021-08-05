@@ -1,13 +1,14 @@
 package com.evolution
 package repositories.interpreters
 
+import domain.Player.PlayerId
 import domain.Room.{GamesInProgress, RoomId}
 import domain.{Action, Player, Room}
 import repositories.algebras.GameRepository
 
-import cats.effect.{Async, GenConcurrent, Ref, Sync}
-import cats.implicits._
 import cats.effect.std.Queue
+import cats.effect.{Async, Ref, Sync}
+import cats.implicits._
 
 sealed trait Operation
 
@@ -53,7 +54,7 @@ class InMemoryGameRepository[F[_]: Async](
 
   def getPlayersInRoom(roomId: RoomId): F[Option[(Player, Player)]] = {
     gamesInProgress.get.map(_.get(roomId) match {
-      case Some(value) => Some(value.playerOne, value.playerTwo)
+      case Some(value) => Some(value.players.head._2, value.players.last._2)
       case None        => None
     })
   }
@@ -62,14 +63,15 @@ class InMemoryGameRepository[F[_]: Async](
     gamesInProgress.get.map(_.get(roomId))
   }
 
-  def updateActionAndGetRoom(roomId: RoomId, player: Player, action: Action): F[Room] = {
+  def updateActionAndGetRoom(roomId: RoomId, playerId: PlayerId, action: Action): F[Room] = {
     gamesInProgress
       .updateAndGet { games =>
         games.get(roomId) match {
           case Some(room) =>
-            val newRoom =
-              if (player.id == room.playerOne.id) room.copy(playerOneAction = Option(action))
-              else room.copy(playerTwoAction = Option(action))
+            val newRoom = room.copy(playersActions = room.playersActions.get(playerId) match {
+              case Some(value) => room.playersActions + (playerId -> value)
+              case None        => room.playersActions + (playerId -> action)
+            })
 
             games + (roomId -> newRoom)
           case None       => games

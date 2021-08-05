@@ -2,7 +2,7 @@ package com.evolution
 package repositories.interpreters
 
 import domain.Participant.{Loser, Winner}
-import domain.Player.{Liquidity, Token}
+import domain.Player.{Liquidity, PlayerId, Token}
 import domain.{Participant, Player}
 import repositories.algebras.PlayerRepository
 
@@ -44,5 +44,9 @@ class InMemoryPlayerRepository[F[_]: Sync](
     liquidity.update(current => {
       current + (player.id -> token)
     })
+  }
+
+  def getCurrentLiquidity(playerId: PlayerId): F[Token]     = {
+    liquidity.get.flatMap(playerMap => Sync[F].delay(playerMap(playerId)))
   }
 }

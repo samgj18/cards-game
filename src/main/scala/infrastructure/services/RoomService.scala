@@ -2,15 +2,14 @@ package com.evolution
 package infrastructure.services
 
 import domain.Game.generate
+import domain.Message.RoomInformation
 import domain.Player.PlayerId
 import domain.Room.RoomId
 import domain.{Card, Game, Room}
-import repositories.algebras.{GameRepository, MessageRepository}
+import repositories.algebras.{GameRepository, MessageRepository, PlayerRepository}
 
-import cats.effect.kernel.Concurrent
-import cats.effect.{Async, Sync}
+import cats.effect.Sync
 import cats.implicits._
-import com.evolution.domain.Message.General
 
 import java.util.UUID.randomUUID
 import scala.util.Random
@@ -23,15 +22,17 @@ trait RoomManager[F[_]] {
 object RoomService         {
   def make[F[_]: Sync](
       gameRepository: GameRepository[F],
-      messageRepository: MessageRepository[F]
+      messageRepository: MessageRepository[F],
+      playerRepository: PlayerRepository[F]
   ): F[RoomService[F]] = {
-    Sync[F].delay(new RoomService[F](gameRepository, messageRepository))
+    Sync[F].delay(new RoomService[F](gameRepository, messageRepository, playerRepository))
   }
 }
 
 class RoomService[F[_]: Sync](
     gameRepository: GameRepository[F],
-    messageRepository: MessageRepository[F]
+    messageRepository: MessageRepository[F],
+    playerRepository: PlayerRepository[F]
 ) extends RoomManager[F] {
 
   def createRoom(game: Game): F[Room]        = {
@@ -42,10 +43,19 @@ class RoomService[F[_]: Sync](
           .delay(randomUUID.toString)
           .flatMap(id =>
             dispatcher(generate, one.id, two.id).flatMap(s => {
-              val room = Room(id, game, one, two, None, None, s._2, s._1)
+              val room = Room(
+                id,
+                game,
+                Map(one.id -> one, two.id -> two),
+                playersActions = Map.empty,
+                s._2,
+                s._1
+              )
               gameRepository.addGameInProgress(room) >> messageRepository
-                .addMessageToNotifications(one.id, General(id)) >> messageRepository
-                .addMessageToNotifications(two.id, General(id)) as room
+                .addMessageToNotifications(one.id, RoomInformation(id, s._1(one.id).value)) >>
+                messageRepository
+                  .addMessageToNotifications(two.id, RoomInformation(id, s._1(two.id).value)) as
+                room
             })
           )
       })

@@ -7,6 +7,7 @@ import repositories.algebras._
 
 import cats.effect.Sync
 import cats.implicits._
+import com.evolution.domain.Message.Balance
 
 import java.util.UUID.randomUUID
 
@@ -31,7 +32,7 @@ class PlayerService[F[_]: Sync](
 ) extends PlayerManager[F] {
   def createPlayer(name: String): F[Player] =
     Sync[F].delay(randomUUID().toString).flatMap { id =>
-      val player = Player(name, name)
+      val player = Player(id, name)
       playerRepository.addLiquidity(player, 1000) >> gameRepository
         .addPlayerToLobby(player) >> messageRepository
         .addPlayerToNotificationPool(player.id) as player

@@ -1,10 +1,8 @@
 package com.evolution
 package domain
 
-import domain.Player.PlayerId
-import domain.Room.RoomId
-
-import io.circe.Encoder
+import domain.Player.{PlayerId, Players}
+import domain.Room.{Actions, Cards, RoomId}
 
 sealed trait RoomState
 
@@ -15,15 +13,16 @@ object RoomState {
 final case class Room(
     roomId: RoomId,
     game: Game,
-    playerOne: Player,
-    playerTwo: Player,
-    playerOneAction: Option[Action],
-    playerTwoAction: Option[Action],
+    players: Players,
+    playersActions: Actions,
     deck: List[Card],
-    cards: Map[PlayerId, Card]
+    cards: Cards
 )
 
 object Room      {
   type RoomId          = String
   type GamesInProgress = Map[RoomId, Room]
+  type Cards           = Map[PlayerId, Card]
+  type Actions         = Map[PlayerId, Action]
+
 }

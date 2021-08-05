@@ -22,7 +22,7 @@ object Main extends IOApp {
       messageRepository   <- InMemoryMessageRepository.make
       gameRepository      <- InMemoryGameRepository.make
       playerService       <- PlayerService.make(playerRepository, gameRepository, messageRepository)
-      roomService         <- RoomService.make(gameRepository, messageRepository)
+      roomService         <- RoomService.make(gameRepository, messageRepository, playerRepository)
       actionService       <- ActionService.make(gameRepository, playerRepository, messageRepository)
       orchestratorService <- OrchestratorService.make(roomService, actionService)
       app                  = Routes.make(playerService, orchestratorService, messageRepository)
@@ -35,7 +35,7 @@ object Main extends IOApp {
         case (app, roomService) =>
           val webSocketFrame = BlazeServerBuilder[IO](global)
             .withHttpApp(app)
-            .bindHttp(8080, "0.0.0.0") // To bind it to all available network cards
+            .bindHttp(8080, "localhost") // "0.0.0.0"To bind it to all available network cards
             .serve
           val matchMaker = Stream.repeatEval(roomService.createRoom(SingleCard))
           webSocketFrame.concurrently(matchMaker)

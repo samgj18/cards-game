@@ -1,10 +1,12 @@
 package com.evolution
 package infrastructure.http
 
+import domain.Message.Balance
 import dto.OrchestrateSubmission
-import infrastructure.services.{OrchestratorService, PlayerService, RoomService}
+import infrastructure.services.{OrchestratorService, PlayerService}
 import repositories.algebras.MessageRepository
 
+import io.circe.syntax._
 import cats.effect._
 import cats.implicits._
 import io.circe.jawn._
@@ -37,7 +39,7 @@ class Routes[F[_]: Async](
 
       case GET -> Root / "ws" / channel =>
         val fromClient: Pipe[F, WebSocketFrame, Unit] = _.evalMap {
-          case Text(t, _)   =>
+          case Text(t, _) =>
             Async[F].delay(decode[OrchestrateSubmission](t)).flatMap {
               case Left(value)  => Async[F].delay(Text(s"Unknown type: $value")) >> Async[F].unit
               case Right(value) =>
@@ -45,18 +47,21 @@ class Routes[F[_]: Async](
                   .orchestrate(value.roomId, value.playerId, value.action)
                   .map(_ => Text(s"Unknown type: $value")) >> Async[F].unit
             }
-          case close: Close =>
-            ??? // Remove players, do clean up, make the other one winner and notify
-          case f => Async[F].delay(Text(s"Unknown type: $f")) >> Async[F].unit
+          case f          => Async[F].delay(Text(s"Unknown type: $f")) >> Async[F].unit
         }
 
-        playerService.createPlayer(channel) >>
-          messageRepository
-            .addPlayerToNotificationPool(channel)
-            .flatMap { queue =>
-              val toClient: Stream[F, WebSocketFrame] =
-                Stream.fromQueueUnterminated(queue).map(notification => Text(s"$notification"))
-              WebSocketBuilder[F].build(toClient, fromClient)
-            }
+        for {
+          player <- playerService.createPlayer(channel)
+          queue                              <- messageRepository
+                     .addPlayerToNotificationPool(player.id)
+          _                                  <- messageRepository.addMessageToNotifications(player.id, Balance(player.id, 1000))
+          toClient: Stream[F, WebSocketFrame] =
+            Stream
+              .fromQueueUnterminated(queue)
+              .map(notification => Text(s"${notification.asJson}"))
+          response                           <- WebSocketBuilder[F].build(toClient, fromClient)
+
+        } yield response
+
     }
 }

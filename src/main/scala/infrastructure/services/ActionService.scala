@@ -1,7 +1,7 @@
 package com.evolution
 package infrastructure.services
 
-import domain.Game.game
+import domain.Game.singleCardGame
 import domain.Message._
 import domain.Participant._
 import domain.Player.PlayerId
@@ -37,31 +37,13 @@ class ActionService[F[_]: Sync](
 
   def performAction(roomId: RoomId, playerId: PlayerId, action: Action): F[Result] = {
     gameRepository.getGameInProgress(roomId).flatMap {
-      case Some(room) =>
-        actions(room) match {
-          case (None, None)                                   =>
-            if (comparator(playerId, room.playerOne))
-              gameRepository
-                .updateActionAndGetRoom(roomId, room.playerOne, action) as
-                game(Some(action), None, room.playerOne, room.playerTwo)
-            else
-              gameRepository
-                .updateActionAndGetRoom(roomId, room.playerOne, action) as
-                game(None, Some(action), room.playerOne, room.playerTwo)
-          case (Some(playerOneAction), None)                  =>
-            gameRepository
-              .updateActionAndGetRoom(roomId, room.playerTwo, action) as
-              game(Some(playerOneAction), Some(action), room.playerOne, room.playerTwo)
-          case (None, Some(playerTwoAction))                  =>
-            gameRepository
-              .updateActionAndGetRoom(roomId, room.playerTwo, action) as
-              game(Some(action), Some(playerTwoAction), room.playerOne, room.playerTwo)
-          case (Some(playerOneAction), Some(playerTwoAction)) =>
-            Sync[F].delay(
-              game(Some(playerOneAction), Some(playerTwoAction), room.playerOne, room.playerTwo)
-            )
-        }
-      case None       => Sync[F].delay(NotStarted)
+      case Some(_) =>
+        gameRepository
+          .updateActionAndGetRoom(roomId, playerId, action)
+          .flatMap { newRoom =>
+            Sync[F].delay(singleCardGame(newRoom.playersActions, newRoom.players, playerId))
+          }
+      case None    => Sync[F].delay(NotStarted)
     }
   }
 
@@ -78,20 +60,23 @@ class ActionService[F[_]: Sync](
     }
   }
 
-  private def comparator(playerId: PlayerId, player: Player): Boolean              =
-    player.id == playerId
-
-  private def actions(room: Room): (Option[Action], Option[Action]) =
-    (room.playerOneAction, room.playerTwoAction)
-
-  private def changeStatus(player: Participant): F[Unit] = {
+  private def changeStatus(player: Participant): F[Unit]                           = {
     player match {
-      case Winner(player, revenue) =>
-        playerRepository.updateLiquidity(Winner(player, revenue)) >> messageRepository
-          .addMessageToNotifications(player.id, Win)
-      case Loser(player, lost)     =>
-        playerRepository.updateLiquidity(Loser(player, lost)) >> messageRepository
-          .addMessageToNotifications(player.id, Lost)
+      case Winner(participant, revenue) =>
+        playerRepository.updateLiquidity(Winner(participant, revenue)) >> messageRepository
+          .addMessageToNotifications(participant.id, Win) >> notifyLiquidity(participant.id)
+      case Loser(participant, lost)     =>
+        playerRepository.updateLiquidity(Loser(participant, lost)) >> messageRepository
+          .addMessageToNotifications(participant.id, Lost) >> notifyLiquidity(participant.id)
     }
+  }
+
+  def notifyLiquidity(playerId: PlayerId): F[Unit]                                 = {
+    playerRepository
+      .getCurrentLiquidity(playerId)
+      .flatMap(token => {
+        messageRepository
+          .addMessageToNotifications(playerId, Balance(playerId, token))
+      })
   }
 }

@@ -1,11 +1,14 @@
 package com.evolution
 package domain
 
+import domain.Player.PlayerId
+
 import io.circe.{Decoder, Encoder}
 
 sealed trait Action
 
 object Action {
+
   case object PlayCard extends Action
   case object Fold     extends Action
 

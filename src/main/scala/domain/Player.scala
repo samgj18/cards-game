@@ -1,7 +1,7 @@
 package com.evolution
 package domain
 
-import domain.Player.{PlayerId, Token}
+import domain.Player.PlayerId
 
 import io.circe.{Decoder, Encoder}
 
@@ -14,6 +14,7 @@ object Player {
   type PlayerId  = String
   type Token     = Int
   type Liquidity = Map[PlayerId, Token]
+  type Players   = Map[PlayerId, Player]
 
   implicit val decoder: Decoder[Player] = {
     Decoder.forProduct2("id", "name")((id, name) => Player(id, name))

@@ -1,9 +1,11 @@
 package com.evolution
 package domain
 
-import domain.Action._
-import domain.Participant._
-import domain.Result._
+import domain.Action.{Fold, PlayCard}
+import domain.Participant.{Loser, Winner}
+import domain.Player.{PlayerId, Players}
+import domain.Result.{Draw, Finished, InProgress}
+import domain.Room.Actions
 
 sealed trait Game
 
@@ -15,24 +17,23 @@ object Game {
   def generate: List[Card] =
     (2 to 14).flatMap(value => List.fill(4)(Card(value))).toList
 
-  def game(
-      playerOneAction: Option[Action],
-      playerTwoAction: Option[Action],
-      playerOne: Player,
-      playerTwo: Player
+  def singleCardGame(
+      playersActions: Actions,
+      players: Players,
+      current: PlayerId
   ): Result = {
-    (playerOneAction, playerTwoAction) match {
-      case (Some(fAction), Some(sAction)) =>
-        (fAction, sAction) match {
-          case (Fold, Fold)         => Finished(Loser(playerOne, 1), Loser(playerTwo, 1))
-          case (PlayCard, Fold)     => Finished(Winner(playerOne, 3), Loser(playerTwo, 3))
-          case (Fold, PlayCard)     => Finished(Loser(playerOne, 3), Winner(playerTwo, 3))
-          case (PlayCard, PlayCard) =>
-            Draw(playerOne, playerTwo) // Check value of card and return Finished or Draw
+    val notInTurnPlayer    = players.filter(_._1 != current).head._2
+    val inTurnPlayer       = players(current)
+    val inTurnPlayerAction = playersActions(current)
+    playersActions.get(notInTurnPlayer.id) match {
+      case Some(notInTurnPlayerAction) =>
+        (inTurnPlayerAction, notInTurnPlayerAction) match {
+          case (PlayCard, PlayCard) => Draw(inTurnPlayer, notInTurnPlayer)
+          case (PlayCard, Fold)     => Finished(Winner(inTurnPlayer, 3), Loser(notInTurnPlayer, 3))
+          case (Fold, PlayCard)     => Finished(Loser(inTurnPlayer, 3), Winner(notInTurnPlayer, 3))
+          case (Fold, Fold)         => Finished(Loser(inTurnPlayer, 1), Loser(notInTurnPlayer, 1))
         }
-      case (None, Some(_))                => InProgress(playerOne)
-      case (Some(_), None)                => InProgress(playerTwo)
-      case (None, None)                   => NotStarted
+      case None                        => InProgress(notInTurnPlayer)
     }
   }
 }
