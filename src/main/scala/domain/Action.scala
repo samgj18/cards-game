@@ -1,8 +1,6 @@
 package com.evolution
 package domain
 
-import domain.Player.PlayerId
-
 import io.circe.{Decoder, Encoder}
 
 sealed trait Action
