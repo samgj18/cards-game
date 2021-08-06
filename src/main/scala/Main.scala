@@ -16,6 +16,10 @@ import scala.concurrent.ExecutionContext.global
 
 object Main extends IOApp {
 
+  /**
+    * This method is in charge of dependency injection,
+    * we make it just once to avoid creating multiple instances of the same classes
+    */
   def dependencies[F[_]: Async]: F[(HttpApp[F], RoomService[F])] =
     for {
       playerRepository    <- InMemoryPlayerRepository.make
@@ -23,7 +27,8 @@ object Main extends IOApp {
       gameRepository      <- InMemoryGameRepository.make
       playerService       <- PlayerService.make(playerRepository, gameRepository, messageRepository)
       roomService         <- RoomService.make(gameRepository, messageRepository, playerRepository)
-      actionService       <- ActionService.make(gameRepository, playerRepository, messageRepository)
+      actionService       <-
+        ActionService.make(gameRepository, playerRepository, messageRepository, roomService)
       orchestratorService <- OrchestratorService.make(roomService, actionService)
       app                  = Routes.make(playerService, orchestratorService, messageRepository)
     } yield (app.orNotFound, roomService)

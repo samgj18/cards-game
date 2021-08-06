@@ -3,7 +3,7 @@ package repositories.interpreters
 
 import domain.Player.PlayerId
 import domain.Room.{GamesInProgress, RoomId}
-import domain.{Action, Player, Room}
+import domain.{Action, Card, Player, Room}
 import repositories.algebras.GameRepository
 
 import cats.effect.std.Queue
@@ -63,7 +63,7 @@ class InMemoryGameRepository[F[_]: Async](
     gamesInProgress.get.map(_.get(roomId))
   }
 
-  def updateActionAndGetRoom(roomId: RoomId, playerId: PlayerId, action: Action): F[Room] = {
+  def updateAction(roomId: RoomId, playerId: PlayerId, action: Action): F[Room] = {
     gamesInProgress
       .updateAndGet { games =>
         games.get(roomId) match {
@@ -78,6 +78,26 @@ class InMemoryGameRepository[F[_]: Async](
         }
       }
       .flatMap(games => Sync[F].delay(games(roomId)))
+  }
+
+  def updatePlayerCard(roomId: RoomId, playerId: PlayerId, card: Card): F[Unit] = {
+    gamesInProgress.update { games =>
+      games + (roomId -> games(roomId).copy(cards = games(roomId).cards + (playerId -> card)))
+    }
+  }
+
+  def updateRoomDeck(roomId: RoomId, renewed: List[Card]): F[Unit]              = {
+    gamesInProgress
+      .update { games =>
+        games + (roomId -> games(roomId).copy(deck = renewed))
+      }
+  }
+
+  def removePlayerAction(roomId: RoomId, playerId: PlayerId): F[Unit]           = {
+    gamesInProgress.update { games =>
+      games + (roomId -> games(roomId)
+        .copy(playersActions = games(roomId).playersActions - playerId))
+    }
   }
 
 }

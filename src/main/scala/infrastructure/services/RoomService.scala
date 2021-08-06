@@ -2,9 +2,9 @@ package com.evolution
 package infrastructure.services
 
 import domain.Game.generate
-import domain.Message.RoomInformation
+import domain.Message.RoomACK
 import domain.Player.PlayerId
-import domain.Room.RoomId
+import domain.Room.{Cards, RoomId}
 import domain.{Card, Game, Room}
 import repositories.algebras.{GameRepository, MessageRepository, PlayerRepository}
 
@@ -17,6 +17,11 @@ import scala.util.Random
 trait RoomManager[F[_]] {
   def createRoom(game: Game): F[Room]
   def deleteRoom(roomId: RoomId): F[Boolean]
+  def dispatcher(
+      deck: List[Card],
+      playerOneId: PlayerId,
+      playerTwoId: PlayerId
+  ): F[(Cards, List[Card])]
 }
 
 object RoomService         {
@@ -52,9 +57,9 @@ class RoomService[F[_]: Sync](
                 s._1
               )
               gameRepository.addGameInProgress(room) >> messageRepository
-                .addMessageToNotifications(one.id, RoomInformation(id, s._1(one.id).value)) >>
+                .addNotification(one.id, RoomACK(id, s._1(one.id).value)) >>
                 messageRepository
-                  .addMessageToNotifications(two.id, RoomInformation(id, s._1(two.id).value)) as
+                  .addNotification(two.id, RoomACK(id, s._1(two.id).value)) as
                 room
             })
           )
@@ -72,11 +77,15 @@ class RoomService[F[_]: Sync](
     } yield removed
   }
 
-  private def dispatcher(
+  /**
+    * The dispatcher acts as the dealer in a real life game. This particular one is fixed to deliver
+    * two cards per call.
+    */
+  def dispatcher(
       deck: List[Card],
       playerOneId: PlayerId,
       playerTwoId: PlayerId
-  ): F[(Map[PlayerId, Card], List[Card])]    = {
+  ): F[(Cards, List[Card])]                  = {
     Sync[F].delay({
       val random         = new Random
       val length         = deck.length

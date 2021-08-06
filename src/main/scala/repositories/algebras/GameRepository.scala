@@ -3,7 +3,7 @@ package repositories.algebras
 
 import domain.Player.PlayerId
 import domain.Room.RoomId
-import domain.{Action, Player, Room}
+import domain.{Action, Card, Player, Room}
 
 trait GameRepository[F[_]] {
   def addGameInProgress(room: Room): F[Unit]
@@ -12,5 +12,8 @@ trait GameRepository[F[_]] {
   def getPlayersInRoom(roomId: RoomId): F[Option[(Player, Player)]]
   def getGameInProgress(roomId: RoomId): F[Option[Room]]
   def removeGameInProgress(roomId: RoomId): F[Boolean]
-  def updateActionAndGetRoom(roomId: RoomId, playerId: PlayerId, action: Action): F[Room]
+  def removePlayerAction(roomId: RoomId, playerId: PlayerId): F[Unit]
+  def updateAction(roomId: RoomId, playerId: PlayerId, action: Action): F[Room]
+  def updatePlayerCard(roomId: RoomId, playerId: PlayerId, card: Card): F[Unit]
+  def updateRoomDeck(roomId: RoomId, renewed: List[Card]): F[Unit]
 }

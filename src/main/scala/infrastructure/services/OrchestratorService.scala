@@ -25,10 +25,15 @@ class OrchestratorService[F[_]: Async](
     roomService: RoomService[F],
     actionService: ActionService[F]
 ) extends OrchestratorManager[F] {
+
+  /**
+    * The orchestrator keeps a vigilant eye upon every user request to guide him through upto
+    * completion of the game.
+    */
   def orchestrate(roomId: RoomId, playerId: PlayerId, action: Action): F[Boolean] = {
     for {
-      result     <- actionService.performAction(roomId, playerId, action)
-      keepAlive  <- actionService.matchResolver(result)
+      result     <- actionService.performer(roomId, playerId, action)
+      keepAlive  <- actionService.decider(result)
       completion <- if (keepAlive.value) Sync[F].delay(false)
                     else roomService.deleteRoom(roomId)
     } yield completion

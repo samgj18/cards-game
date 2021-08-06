@@ -11,15 +11,16 @@ a client in order to play a single card game.
 - Connect via websocket (you can use Postman) pointing to the following url ```ws://127.0.0.1:8080/ws/:arbitraryId```, it'll automatically create a user and add it to the queue to start a game.
 - Once connected and if two users are available then you'll receive a message like such: ```General({{roomId}})```. This is the id of the room that will be used to play.
 - There are two types of movements ```playCard``` and ```fold```, you can decide how to play by sending the following payload via websocket:
+
+#### Optional:
+
 - To test it across multiple devices install [ngrock](https://dashboard.ngrok.com) and type the command ```ngrok tcp 8080```, this will create an external link to your application that should look like this ```tcp://2.tcp.ngrok.io:14744```.
 - Replace the ```tcp``` portion for ```ws``` in your favourite client, and you're ready to go.
+- Finally, there's a companion app to make life easier to test this application. Please refer to [iOS Client](https://github.com/samgj18/cards-game-client).
 
-### Todo:
-- [x] Implement DoubleCard game.
-- [x] Implement solution in case of Draw State.
 
 ### Key design decisions
-To manage consistent data that supports concurrency this application makes heavy use of:
+To ensure consistency and concurrency this application heavily relies on two data types:
 ```scala 
 Queue[F, Type] and Ref[F, Type]
 ```

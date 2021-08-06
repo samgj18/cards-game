@@ -54,7 +54,7 @@ class Routes[F[_]: Async](
           player <- playerService.createPlayer(channel)
           queue                              <- messageRepository
                      .addPlayerToNotificationPool(player.id)
-          _                                  <- messageRepository.addMessageToNotifications(player.id, Balance(player.id, 1000))
+          _                                  <- messageRepository.addNotification(player.id, Balance(player.id, 1000))
           toClient: Stream[F, WebSocketFrame] =
             Stream
               .fromQueueUnterminated(queue)

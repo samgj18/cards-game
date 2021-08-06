@@ -23,7 +23,7 @@ object InMemoryMessageRepository {
 class InMemoryMessageRepository[F[_]: Concurrent](
     private val notifications: Ref[F, Notifications[F]]
 ) extends MessageRepository[F] {
-  def addMessageToNotifications(playerId: PlayerId, message: Message): F[Unit] = {
+  def addNotification(playerId: PlayerId, message: Message): F[Unit] = {
     notifications.get.flatMap(playerMap => playerMap(playerId).offer(message))
   }
 
