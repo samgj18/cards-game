@@ -102,8 +102,6 @@ class ActionService[F[_]: Sync](
       cards: Cards,
       deck: List[Card]
   ): F[Unit] = {
-    println(playerOneId, cards(playerOneId))
-    println(playerTwoId, cards(playerTwoId))
     gameRepository.removePlayerAction(roomId, playerOneId) >>
       gameRepository.removePlayerAction(roomId, playerTwoId) >>
       gameRepository.updatePlayerCard(roomId, playerOneId, cards(playerOneId)) >>
