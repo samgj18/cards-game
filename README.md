@@ -30,7 +30,6 @@ Queue[F, Type] and Ref[F, Type]
 
 ### Limitations
 
-- Currently, this implementation doesn't support "multi-tabling" - players can play multiple games in parallel at once
-- Account balances are not persistent.
+- Currently, this implementation doesn't support Double Card Game. 
 
 **You should be able to see the output in the console of your websocket client**
